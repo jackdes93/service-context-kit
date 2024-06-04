@@ -9,6 +9,7 @@ import (
 
 	sctx "github.com/jackdes93/service-context-kit"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -129,4 +130,26 @@ func (m *mongoStore) InsertMany(ctx context.Context, colName string, data []inte
 
 func (m *mongoStore) FetchOne(ctx context.Context, colName string, filter interface{}, project interface{}, v interface{}) error {
 	return m.client.Collection(colName).FindOne(ctx, filter, options.FindOne().SetProjection(project)).Decode(v)
+}
+
+func (m *mongoStore) FindAggregate(ctx context.Context, colName string, pipelines []primitive.M) ([]interface{}, error) {
+	temp, err := m.client.Collection(colName).Aggregate(ctx, pipelines)
+	if err != nil {
+		return nil, err
+	}
+
+	defer func(temp *mongo.Cursor, ctx context.Context) {
+		_ = temp.Close(ctx)
+	}(temp, ctx)
+
+	var data []interface{}
+	for temp.Next(ctx) {
+		var info interface{}
+		err := temp.Decode(&info)
+		if err != nil {
+			return nil, err
+		}
+		data = append(data, info)
+	}
+	return data, nil
 }
