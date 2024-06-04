@@ -126,3 +126,7 @@ func (m *mongoStore) InsertMany(ctx context.Context, colName string, data []inte
 	_, err := m.client.Collection(colName).InsertMany(ctx, data)
 	return err
 }
+
+func (m *mongoStore) FetchOne(ctx context.Context, colName string, filter interface{}, project interface{}, v interface{}) error {
+	return m.client.Collection(colName).FindOne(ctx, filter, options.FindOne().SetProjection(project)).Decode(v)
+}
